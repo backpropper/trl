@@ -120,6 +120,8 @@ class SFTTrainer(Trainer):
         chars_per_token: Optional[float] = 3.6,
         dataset_num_proc: Optional[int] = None,
         dataset_batch_size: int = 1000,
+        padding_side: str = "right",
+        trl_eval_size: int = 1000,
     ):
         if isinstance(model, str):
             warnings.warn(
@@ -162,7 +164,7 @@ class SFTTrainer(Trainer):
             model = AutoModelForCausalLM.from_pretrained(model)
 
         if tokenizer is None:
-            tokenizer = AutoTokenizer.from_pretrained(model.config._name_or_path)
+            tokenizer = AutoTokenizer.from_pretrained(model.config._name_or_path, padding_side=padding_side)
             if getattr(tokenizer, "pad_token", None) is None:
                 tokenizer.pad_token = tokenizer.eos_token
 
@@ -228,6 +230,7 @@ class SFTTrainer(Trainer):
             callbacks=callbacks,
             optimizers=optimizers,
             preprocess_logits_for_metrics=preprocess_logits_for_metrics,
+            trl_eval_size=trl_eval_size,
         )
 
         if self.args.max_steps > 0 and packing:
