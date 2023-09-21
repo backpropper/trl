@@ -154,7 +154,7 @@ class IWSFTTrainer(SFTTrainer):
         #     loss = (
         #         outputs["loss"] * iw if isinstance(outputs, dict) else outputs[0] * iw
         #
-        loss = main_loss * iw + self.kl_weight * total_kl
+        loss = main_loss * (iw + self.kl_weight * total_kl)
         return (
             (loss, outputs)
             if return_outputs
