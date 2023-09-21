@@ -1,0 +1,10 @@
+__pycache__
+.ipynb_checkpoints
+.DS_Store
+.hydra
+local_outputs
+data
+amlt
+wandb
+.amltconfig
+.vscode
