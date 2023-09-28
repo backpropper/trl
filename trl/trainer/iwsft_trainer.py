@@ -84,6 +84,8 @@ class IWSFTTrainer(SFTTrainer):
                     print(outputs.sequences[i])
                     print(response[:last_ind+1])
                     eos += 1
+                    loss = torch.tensor(float('nan'))
+                    return (loss, total_kl, total_kl, total_kl, total_kl, eos)
                 response = response[:last_ind+1]
             responses.append(response)
             target = response
@@ -97,16 +99,22 @@ class IWSFTTrainer(SFTTrainer):
                         ref_logits = (
                             self.model(input_ids=response.unsqueeze(0))["logits"].detach().squeeze()
                         )
-                    per_kl = F.kl_div(
-                        torch.log_softmax(logits, -1),
-                        torch.log_softmax(ref_logits, -1),
-                        log_target=True,
-                        reduction="none",
-                    ).sum(-1)
-                    if kl_loss is None:
-                        kl_loss = per_kl
-                    else:
-                        kl_loss = torch.cat((kl_loss, per_kl), dim=0)
+                per_rev_kl = F.kl_div(
+                    torch.log_softmax(ref_logits, -1),
+                    torch.log_softmax(logits, -1),
+                    log_target=True,
+                    reduction="none",
+                ).sum(-1)
+                per_kl = F.kl_div(
+                    torch.log_softmax(ref_logits, -1),
+                    torch.log_softmax(logits, -1),
+                    log_target=True,
+                    reduction="none",
+                ).sum(-1)
+                if kl_loss is None:
+                    kl_loss = (per_kl + per_rev_kl ) / 2
+                else:
+                    kl_loss = torch.cat((kl_loss, (per_kl + per_rev_kl) / 2), dim=0)
         if self.kl_enable:
             total_kl = torch.mean(kl_loss)
 
@@ -154,7 +162,7 @@ class IWSFTTrainer(SFTTrainer):
         #     loss = (
         #         outputs["loss"] * iw if isinstance(outputs, dict) else outputs[0] * iw
         #
-        loss = main_loss * (iw + self.kl_weight * total_kl)
+        loss = main_loss * iw + self.kl_weight * total_kl
         return (
             (loss, outputs)
             if return_outputs
